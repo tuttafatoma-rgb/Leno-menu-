@@ -1,0 +1,23 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#10283b"><title>LENO Restaurant & Cafe</title>
+<style>
+:root{--navy:#10283b;--gold:#c5a36a;--cream:#fbf2e4;--ink:#1b2d3b}*{box-sizing:border-box}body{margin:0;background:#f7f0e5;color:var(--ink);font-family:Tahoma,Arial,sans-serif}
+header{background:var(--navy);color:white;text-align:center;padding:24px 14px 18px;border-bottom:4px solid var(--gold)}.logo{font: bold 38px Georgia,serif;letter-spacing:3px}.sub{color:#e8d6b3;font-size:13px;margin-top:3px}
+.wrap{max-width:980px;margin:auto;padding:14px}.welcome{text-align:center;padding:14px 0 12px}.welcome h1{font-size:21px;margin:0 0 7px}.welcome p{margin:0;color:#6c6255;font-size:13px}
+.search{width:100%;padding:13px 16px;border:1px solid #d8c6a6;border-radius:12px;font-size:15px;background:#fff;margin:12px 0}
+.categories{display:flex;gap:8px;overflow:auto;padding:4px 0 15px;position:sticky;top:0;background:#f7f0e5;z-index:2}.categories button{border:1px solid #d0b887;background:#fffaf1;color:var(--navy);padding:10px 14px;border-radius:22px;white-space:nowrap;font-size:13px}.categories button.active{background:var(--navy);color:white}
+section{scroll-margin-top:74px;margin:10px 0 22px}.cat-title{font-size:19px;color:var(--navy);border-right:4px solid var(--gold);padding:3px 10px;margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:9px}.item{background:#fffdf8;border:1px solid #eadcc3;border-radius:12px;padding:13px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:55px}.item-name{font-size:14px;line-height:1.6}.price{font-weight:bold;color:var(--navy);white-space:nowrap;font-size:14px}.price small{display:block;font-size:10px;font-weight:normal;color:#80745f;text-align:center}.multi{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.multi span{background:#f4ead8;padding:5px 7px;border-radius:7px;font-size:12px;white-space:nowrap}.empty{text-align:center;padding:25px;color:#766}.hide{display:none!important}footer{text-align:center;padding:22px;background:var(--navy);color:#eee0c5;font-size:12px}
+</style></head><body><header><div class="logo">LENO</div><div class="sub">Restaurant &amp; Cafe</div></header><div class="wrap"><div class="welcome"><h1>منيو LENO</h1><p>اختار القسم واستمتع بتصفح المنيو</p></div><input id="search" class="search" placeholder="ابحث عن صنف..." aria-label="ابحث عن صنف"><nav class="categories" id="cats"></nav><div id="menu"><div class="empty">جاري تحميل المنيو...</div></div><div id="empty" class="empty hide">مفيش أصناف مطابقة للبحث.</div></div><footer>LENO Restaurant &amp; Cafe</footer>
+<script>
+const cats=document.getElementById('cats'),menu=document.getElementById('menu'),search=document.getElementById('search');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function priceHTML(p){if(typeof p==='number')return '<div class="price">'+p+'</div>';return '<div class="multi">'+Object.entries(p).map(([k,v])=>'<span>'+esc(k)+': <b>'+v+'</b></span>').join('')+'</div>'}
+function active(i){[...cats.children].forEach((b,j)=>b.classList.toggle('active',i===j))}
+function render(categories){cats.innerHTML='';menu.innerHTML='';
+categories.forEach((cat,i)=>{let b=document.createElement('button');b.textContent=cat.name;b.onclick=()=>{document.getElementById('c'+i).scrollIntoView({behavior:'smooth'});active(i)};cats.appendChild(b);
+let s=document.createElement('section');s.id='c'+i;s.innerHTML='<h2 class="cat-title">'+esc(cat.name)+'</h2><div class="grid">'+cat.items.map(it=>'<article class="item" data-search="'+esc((cat.name+' '+it.name).toLowerCase())+'"><span class="item-name">'+esc(it.name)+'</span>'+priceHTML(it.price)+'</article>').join('')+'</div>';menu.appendChild(s)})}
+async function getJSON(u){const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw 0;return r.json()}
+(async()=>{let d=[];try{d=await getJSON('/api/menu')}catch(e){}
+if(!Array.isArray(d)||!d.length){try{d=await getJSON('/menu-default.json')}catch(e){d=[]}}
+if(d.length)render(d);else menu.innerHTML='<div class="empty">تعذر تحميل المنيو، حاولوا مرة أخرى.</div>'})();
+search.addEventListener('input',()=>{let q=search.value.trim().toLowerCase(),shown=0;document.querySelectorAll('section').forEach(s=>{let any=false;s.querySelectorAll('.item').forEach(it=>{let ok=it.dataset.search.includes(q);it.classList.toggle('hide',!ok);if(ok){any=true;shown++}});s.classList.toggle('hide',!any)});document.getElementById('empty').classList.toggle('hide',shown>0);cats.classList.toggle('hide',q.length>0)});
+</script></body></html>

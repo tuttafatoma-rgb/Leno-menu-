@@ -1,0 +1,94 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#10283b"><title>لوحة تحكم LENO</title>
+<style>
+:root{--navy:#10283b;--gold:#c5a36a;--cream:#fbf2e4;--ink:#1b2d3b}*{box-sizing:border-box}body{margin:0;background:#f7f0e5;color:var(--ink);font-family:Tahoma,Arial,sans-serif;padding-bottom:84px}
+header{background:var(--navy);color:#fff;text-align:center;padding:16px 12px;border-bottom:4px solid var(--gold)}header b{font:bold 26px Georgia,serif;letter-spacing:3px}header div{color:#e8d6b3;font-size:12px}
+.wrap{max-width:760px;margin:auto;padding:12px}input{font:inherit;font-size:15px;padding:10px 12px;border:1px solid #d8c6a6;border-radius:10px;background:#fff;width:100%;color:var(--ink)}
+button{font:inherit;font-size:13px;border:1px solid #d0b887;background:#fffaf1;color:var(--navy);padding:9px 12px;border-radius:10px;cursor:pointer}button.pri{background:var(--navy);color:#fff;border-color:var(--navy)}button.del{color:#a33;border-color:#e3b9b9}
+#login{max-width:360px;margin:60px auto;text-align:center}#login input{margin:12px 0}#err{color:#a33;font-size:13px;min-height:18px}
+.tools{display:flex;gap:8px;margin-bottom:12px}.cat{background:#fffdf8;border:1px solid #eadcc3;border-radius:12px;margin-bottom:10px}.cat>summary{padding:14px;font-weight:bold;color:var(--navy);cursor:pointer;display:flex;justify-content:space-between}.cat>summary small{color:#80745f;font-weight:normal}
+.body{padding:0 12px 12px}.bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.row{border-top:1px dashed #e3d3b3;padding:10px 0;display:grid;gap:8px}.pr{display:flex;gap:8px;align-items:center}.pr input{flex:1;min-width:0}.pair{display:flex;gap:6px}.pair input:first-child{flex:2}.pair input:last-child{flex:1}.sz{display:grid;gap:6px}
+#savebar{position:fixed;bottom:0;left:0;right:0;background:var(--navy);padding:12px;display:flex;gap:8px;justify-content:center;align-items:center;color:#fff;font-size:13px}#savebar button.pri{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:bold;padding:11px 28px}
+#toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#1e7a46;color:#fff;padding:10px 18px;border-radius:10px;display:none;z-index:9}
+</style></head><body>
+<header><b>LENO</b><div>لوحة التحكم</div></header>
+<div id="toast"></div>
+<div id="login"><h3>تسجيل الدخول</h3><input id="pw" type="password" placeholder="كلمة السر" autocomplete="current-password"><div id="err"></div><button class="pri" id="go">دخول</button></div>
+<div class="wrap" id="app" style="display:none">
+<div class="tools"><input id="q" placeholder="ابحثي عن صنف أو قسم..."><button id="addcat">+ قسم</button></div>
+<div id="list"></div>
+<p style="text-align:center"><button id="bak">تحميل نسخة احتياطية</button></p></div>
+<div id="savebar" style="display:none"><span id="st"></span><button class="pri" id="save">حفظ التعديلات</button></div>
+<script>
+const $=id=>document.getElementById(id);
+let data=[],pass=sessionStorage.getItem('lp')||'',dirty=false,open=new Set(),focus=null;
+function h(t,p={},...k){const e=document.createElement(t);for(const[a,v]of Object.entries(p)){if(a.startsWith('on'))e[a]=v;else if(a==='class')e.className=v;else e.setAttribute(a,v)}k.flat().filter(c=>c!=null&&c!==false).forEach(c=>e.append(c));return e}
+function mark(v=true){dirty=v;$('st').textContent=v?'في تعديلات لم تُحفظ':'';}
+function toast(m,bad){const t=$('toast');t.textContent=m;t.style.background=bad?'#a33':'#1e7a46';t.style.display='block';setTimeout(()=>t.style.display='none',2500)}
+const num=v=>{const n=parseFloat(v);return isFinite(n)&&n>=0?n:0};
+function move(a,i,d){const j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];render()}
+
+function priceEditor(it){
+ if(typeof it.price==='number')return h('div',{class:'pr'},
+  h('input',{type:'number',inputmode:'decimal',min:'0',value:it.price,placeholder:'السعر',oninput:e=>{it.price=num(e.target.value);mark()}}),
+  h('button',{onclick:()=>{it.price={'كيلو':it.price};mark();render()}},'+ أحجام'));
+ const pairs=Object.entries(it.price);const sync=()=>{it.price=Object.fromEntries(pairs.filter(p=>p[0].trim()));mark()};
+ return h('div',{class:'sz'},
+  pairs.map((p,i)=>h('div',{class:'pair'},
+   h('input',{value:p[0],placeholder:'الحجم',oninput:e=>{p[0]=e.target.value;sync()}}),
+   h('input',{type:'number',inputmode:'decimal',min:'0',value:p[1],placeholder:'السعر',oninput:e=>{p[1]=num(e.target.value);sync()}}),
+   h('button',{class:'del',onclick:()=>{pairs.splice(i,1);if(!pairs.length)pairs.push(['كيلو',0]);sync();render()}},'×'))),
+  h('div',{class:'bar',style:'margin:0'},
+   h('button',{onclick:()=>{pairs.push(['',0]);sync();render()}},'+ حجم'),
+   h('button',{onclick:()=>{it.price=pairs.length?pairs[0][1]:0;mark();render()}},'سعر واحد')));
+}
+function itemRow(c,it,ci,ii){
+ return h('div',{class:'row'},
+  h('div',{class:'pr'},h('input',{value:it.name,placeholder:'اسم الصنف','data-f':ci+'-'+ii,oninput:e=>{it.name=e.target.value;mark()}}),
+   h('button',{class:'del',onclick:()=>{if(confirm('حذف "'+(it.name||'الصنف')+'"؟')){c.items.splice(ii,1);mark();render()}}},'حذف')),
+  priceEditor(it));
+}
+function render(){
+ const box=$('list');box.innerHTML='';const q=$('q').value.trim();
+ data.forEach((c,ci)=>{
+  const rows=c.items.map((it,ii)=>[it,ii]).filter(([it])=>!q||it.name.includes(q)||c.name.includes(q));
+  if(q&&!rows.length)return;
+  const d=h('details',{class:'cat'});d.open=!!q||open.has(ci);
+  d.ontoggle=()=>{if(!q)d.open?open.add(ci):open.delete(ci)};
+  d.append(h('summary',{},h('span',{},c.name||'(بدون اسم)'),h('small',{},c.items.length+' صنف')),
+   h('div',{class:'body'},
+    h('input',{value:c.name,placeholder:'اسم القسم',oninput:e=>{c.name=e.target.value;mark()}}),
+    h('div',{class:'bar'},
+     h('button',{class:'pri',onclick:()=>{c.items.push({name:'',price:0});open.add(ci);focus=ci+'-'+(c.items.length-1);mark();render()}},'+ صنف جديد'),
+     h('button',{onclick:()=>move(data,ci,-1)},'↑ فوق'),h('button',{onclick:()=>move(data,ci,1)},'↓ تحت'),
+     h('button',{class:'del',onclick:()=>{if(confirm('حذف قسم "'+c.name+'" بكل أصنافه؟')){data.splice(ci,1);open.clear();mark();render()}}},'حذف القسم')),
+    rows.map(([it,ii])=>itemRow(c,it,ci,ii))));
+  box.append(d)});
+ if(focus){const e=document.querySelector('[data-f="'+focus+'"]');if(e){e.focus();e.scrollIntoView({block:'center'})}focus=null}
+}
+async function load(){
+ let d=[];try{const r=await fetch('/api/menu',{cache:'no-store'});if(r.ok)d=await r.json()}catch(e){}
+ if(!Array.isArray(d)||!d.length)d=await (await fetch('/menu-default.json')).json();
+ data=d;$('login').style.display='none';$('app').style.display='block';$('savebar').style.display='flex';mark(false);render()
+}
+async function login(p){
+ const r=await fetch('/api/menu?auth=1',{headers:{'x-admin-password':p}});
+ if(!r.ok)throw new Error('كلمة السر غير صحيحة');pass=p;sessionStorage.setItem('lp',p);await load()
+}
+$('go').onclick=()=>login($('pw').value).catch(e=>$('err').textContent=e.message);
+$('pw').onkeydown=e=>{if(e.key==='Enter')$('go').click()};
+$('q').oninput=render;
+$('addcat').onclick=()=>{data.push({name:'قسم جديد',items:[]});open.add(data.length-1);mark();render();$('list').lastChild.scrollIntoView()};
+$('bak').onclick=()=>{const a=h('a',{href:URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'})),download:'leno-menu-backup.json'});a.click()};
+$('save').onclick=async()=>{
+ for(const c of data){if(!c.name.trim())return toast('في قسم بدون اسم',1);for(const i of c.items)if(!i.name.trim())return toast('في صنف بدون اسم ف قسم "'+c.name+'"',1)}
+ $('save').disabled=true;
+ try{const r=await fetch('/api/menu',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':pass},body:JSON.stringify(data)});
+  const j=await r.json().catch(()=>({}));
+  if(r.ok){mark(false);toast('تم الحفظ ✓ التعديلات ظهرت للعملاء')}
+  else if(r.status===401){toast('انتهت الجلسة، ادخلي تاني',1);sessionStorage.removeItem('lp');location.reload()}
+  else toast(j.error==='database not connected'?'قاعدة البيانات غير مربوطة (راجعي خطوات التركيب)':'تعذر الحفظ: '+(j.error||r.status),1)}
+ catch(e){toast('تعذر الاتصال، حاولي تاني',1)}
+ $('save').disabled=false};
+addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
+if(pass)login(pass).catch(()=>sessionStorage.removeItem('lp'));
+</script></body></html>
