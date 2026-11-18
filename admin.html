@@ -6,12 +6,12 @@ header{background:var(--navy);color:#fff;text-align:center;padding:16px 12px;bor
 button{font:inherit;font-size:13px;border:1px solid #d0b887;background:#fffaf1;color:var(--navy);padding:9px 12px;border-radius:10px;cursor:pointer}button.pri{background:var(--navy);color:#fff;border-color:var(--navy)}button.del{color:#a33;border-color:#e3b9b9}
 #login{max-width:360px;margin:60px auto;text-align:center}#login input{margin:12px 0}#err{color:#a33;font-size:13px;min-height:18px}
 .tools{display:flex;gap:8px;margin-bottom:12px}.cat{background:#fffdf8;border:1px solid #eadcc3;border-radius:12px;margin-bottom:10px}.cat>summary{padding:14px;font-weight:bold;color:var(--navy);cursor:pointer;display:flex;justify-content:space-between}.cat>summary small{color:#80745f;font-weight:normal}
-.body{padding:0 12px 12px}.bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.row{border-top:1px dashed #e3d3b3;padding:10px 0;display:grid;gap:8px}.pr{display:flex;gap:8px;align-items:center}.pr input{flex:1;min-width:0}.pair{display:flex;gap:6px}.pair input:first-child{flex:2}.pair input:last-child{flex:1}.sz{display:grid;gap:6px}
+.body{padding:0 12px 12px}.bar{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}.row{border-top:1px dashed #e3d3b3;padding:10px 0;display:grid;gap:8px}.pr{display:flex;gap:8px;align-items:center}.pr input{flex:1;min-width:0}.pair{display:flex;gap:6px}.pair input{width:auto;min-width:0}.pair input:nth-child(1){flex:3}.pair input:nth-child(2){flex:2}.pair button{flex:none}.sz{display:grid;gap:6px}
 #savebar{position:fixed;bottom:0;left:0;right:0;background:var(--navy);padding:12px;display:flex;gap:8px;justify-content:center;align-items:center;color:#fff;font-size:13px}#savebar button.pri{background:var(--gold);border-color:var(--gold);color:var(--navy);font-weight:bold;padding:11px 28px}
 #toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#1e7a46;color:#fff;padding:10px 18px;border-radius:10px;display:none;z-index:9}
 </style></head><body>
 <header><b>LENO</b><div>لوحة التحكم</div></header>
-<div id="toast"></div>
+<div id="toast"></div><datalist id="sizes"><option value="صغير"><option value="وسط"><option value="كبير"><option value="عادي"><option value="سنجل"><option value="دبل"><option value="ثلث كيلو"><option value="نصف كيلو"><option value="كيلو"></datalist>
 <div id="login"><h3>تسجيل الدخول</h3><input id="pw" type="password" placeholder="كلمة السر" autocomplete="current-password"><div id="err"></div><button class="pri" id="go">دخول</button></div>
 <div class="wrap" id="app" style="display:none">
 <div class="tools"><input id="q" placeholder="ابحثي عن صنف أو قسم..."><button id="addcat">+ قسم</button></div>
@@ -34,7 +34,7 @@ function priceEditor(it){
  const pairs=Object.entries(it.price);const sync=()=>{it.price=Object.fromEntries(pairs);mark()};
  return h('div',{class:'sz'},
   pairs.map((p,i)=>h('div',{class:'pair'},
-   h('input',{value:p[0],placeholder:'الحجم',oninput:e=>{p[0]=e.target.value;sync()}}),
+   h('input',{value:p[0],placeholder:'اسم الحجم (كبير / وسط / صغير)',list:'sizes',oninput:e=>{p[0]=e.target.value;sync()}}),
    h('input',{type:'number',inputmode:'decimal',min:'0',value:p[1],placeholder:'السعر',oninput:e=>{p[1]=num(e.target.value);sync()}}),
    h('button',{class:'del',onclick:()=>{pairs.splice(i,1);if(!pairs.length)pairs.push(['كيلو',0]);sync();render()}},'×'))),
   h('div',{class:'bar',style:'margin:0'},
