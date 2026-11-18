@@ -31,14 +31,14 @@ function priceEditor(it){
  if(typeof it.price==='number')return h('div',{class:'pr'},
   h('input',{type:'number',inputmode:'decimal',min:'0',value:it.price,placeholder:'السعر',oninput:e=>{it.price=num(e.target.value);mark()}}),
   h('button',{onclick:()=>{it.price={'كيلو':it.price};mark();render()}},'+ أحجام'));
- const pairs=Object.entries(it.price);const sync=()=>{it.price=Object.fromEntries(pairs.filter(p=>p[0].trim()));mark()};
+ const pairs=Object.entries(it.price);const sync=()=>{it.price=Object.fromEntries(pairs);mark()};
  return h('div',{class:'sz'},
   pairs.map((p,i)=>h('div',{class:'pair'},
    h('input',{value:p[0],placeholder:'الحجم',oninput:e=>{p[0]=e.target.value;sync()}}),
    h('input',{type:'number',inputmode:'decimal',min:'0',value:p[1],placeholder:'السعر',oninput:e=>{p[1]=num(e.target.value);sync()}}),
    h('button',{class:'del',onclick:()=>{pairs.splice(i,1);if(!pairs.length)pairs.push(['كيلو',0]);sync();render()}},'×'))),
   h('div',{class:'bar',style:'margin:0'},
-   h('button',{onclick:()=>{pairs.push(['',0]);sync();render()}},'+ حجم'),
+   h('button',{onclick:()=>{let n=pairs.length+1;while(pairs.some(p=>p[0]==='حجم '+n))n++;pairs.push(['حجم '+n,0]);sync();render()}},'+ حجم'),
    h('button',{onclick:()=>{it.price=pairs.length?pairs[0][1]:0;mark();render()}},'سعر واحد')));
 }
 function itemRow(c,it,ci,ii){
@@ -80,7 +80,7 @@ $('q').oninput=render;
 $('addcat').onclick=()=>{data.push({name:'قسم جديد',items:[]});open.add(data.length-1);mark();render();$('list').lastChild.scrollIntoView()};
 $('bak').onclick=()=>{const a=h('a',{href:URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'})),download:'leno-menu-backup.json'});a.click()};
 $('save').onclick=async()=>{
- for(const c of data){if(!c.name.trim())return toast('في قسم بدون اسم',1);for(const i of c.items)if(!i.name.trim())return toast('في صنف بدون اسم ف قسم "'+c.name+'"',1)}
+ for(const c of data){if(!c.name.trim())return toast('في قسم بدون اسم',1);for(const i of c.items){if(!i.name.trim())return toast('في صنف بدون اسم ف قسم "'+c.name+'"',1);if(typeof i.price==='object'&&Object.keys(i.price).some(k=>!k.trim()))return toast('في حجم بدون اسم ف "'+i.name+'"',1)}}
  $('save').disabled=true;
  try{const r=await fetch('/api/menu',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':pass},body:JSON.stringify(data)});
   const j=await r.json().catch(()=>({}));
