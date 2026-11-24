@@ -41,11 +41,26 @@ function priceEditor(it){
    h('button',{onclick:()=>{let n=pairs.length+1;while(pairs.some(p=>p[0]==='حجم '+n))n++;pairs.push(['حجم '+n,0]);sync();render()}},'+ حجم'),
    h('button',{onclick:()=>{it.price=pairs.length?pairs[0][1]:0;mark();render()}},'سعر واحد')));
 }
+async function upload(file){
+ const bmp=await createImageBitmap(file);const s=Math.min(1,720/Math.max(bmp.width,bmp.height));
+ const c=document.createElement('canvas');c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);
+ const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(bmp,0,0,c.width,c.height);
+ const data=c.toDataURL('image/jpeg',0.75).split(',')[1];
+ const r=await fetch('/api/img',{method:'POST',headers:{'Content-Type':'application/json','x-admin-password':pass},body:JSON.stringify({data})});
+ if(!r.ok)throw new Error('upload failed');return (await r.json()).id}
+function imgEditor(it){
+ const btn=h('button',{},it.img?'📷 تغيير الصورة':'📷 إضافة صورة');
+ const inp=h('input',{type:'file',accept:'image/*',style:'display:none'});
+ btn.onclick=()=>inp.click();
+ inp.onchange=async()=>{const f=inp.files[0];if(!f)return;btn.disabled=true;btn.textContent='جاري الرفع...';
+  try{it.img=await upload(f);mark();render()}catch(e){toast('تعذر رفع الصورة',1);btn.disabled=false;btn.textContent='📷 إضافة صورة'}};
+ return h('div',{class:'pr'},it.img?h('img',{src:'/api/img?id='+it.img,style:'width:56px;height:56px;border-radius:8px;object-fit:cover'}):null,btn,inp,
+  it.img?h('button',{class:'del',onclick:()=>{delete it.img;mark();render()}},'حذف الصورة'):null)}
 function itemRow(c,it,ci,ii){
  return h('div',{class:'row'},
   h('div',{class:'pr'},h('input',{value:it.name,placeholder:'اسم الصنف','data-f':ci+'-'+ii,oninput:e=>{it.name=e.target.value;mark()}}),
    h('button',{class:'del',onclick:()=>{if(confirm('حذف "'+(it.name||'الصنف')+'"؟')){c.items.splice(ii,1);mark();render()}}},'حذف')),
-  priceEditor(it));
+  priceEditor(it),imgEditor(it));
 }
 function render(){
  const box=$('list');box.innerHTML='';const q=$('q').value.trim();
